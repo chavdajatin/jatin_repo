@@ -1,0 +1,43 @@
+pipeline {
+    agent any
+    tools {
+        maven 'maven-3.9.1'
+    }
+    
+    
+    stages {
+         stage('git repo clone') {
+            steps {
+               git 'https://github.com/chavdajatin/devOpsWeb.git'
+            }
+        }
+          stage('maven-build') {
+            steps {
+               sh 'mvn clean install package'
+            }
+        }
+          stage('ECR-login') {
+            steps {
+               script{
+                   sh 'aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/s7v0e6b2'
+               }
+            }
+        }
+         stage('build & push') {
+            steps {
+               script{
+                   sh 'docker build -t myrepo .'
+                   sh 'docker tag myrepo:latest public.ecr.aws/s7v0e6b2/myrepo:latest'
+                   sh 'docker push public.ecr.aws/s7v0e6b2/myrepo:latest'
+               }
+            }
+        }
+        stage('container run') {
+            steps {
+               script{
+                   sh 'docker run -d -p 3000:8080 --name jatin_cont public.ecr.aws/s7v0e6b2/myrepo:latest'
+               }
+            }
+        }
+    }
+}
